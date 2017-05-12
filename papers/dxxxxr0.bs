@@ -1,0 +1,30 @@
+<pre class='metadata'>
+Group: wg21
+Title: Unambiguous prvalue `void`
+Shortname: Dxxxx
+Revision: 1d0
+Status: D
+Audience: EWG
+ED: http://example.com/url-this-spec-will-live-at
+ED: https://github.com/TBBle/WG21-void/blob/master/papers/dxxxxr0.bs
+Editor: Paul "TBBle" Hampson <Paul.Hampson@Pobox.com>
+Date: 2017-04-30
+Abstract: `void()` works like any other `type()`, but `void{}` is invalid.
+</pre>
+
+Proposal {#proposal}
+=====================
+
+An explicit prvalue of type void (spelled `void()` or `type_equivalent to void()`) has a very restricted range of use-cases. Of the use-cases allowed by [...](), most exist to support propagating expressions of type void or dealing with them in a generic manner.
+
+As with all expressions `T()`, the 'Most Vexing Parse' results in `void()` being parsed as a declaration of a parameterless function returning void, unless in a context where only an expression is possible.
+
+The usual method to disambiguate this is to write `T{}` instead. Since [P... simplified value categories](), this is explicitly disallowed by the standard: The literal spelling `void()` or the generic spelling `T()` where `T` somehow evaluates to `void` is explicitly called out as a "prvalue of type void with no initialisation" (get exact text). The equivalent spelling using `{}` is falls through the usual rules to generate an initialisation expression, failing when a requirement it hit to zero-initialise a prvalue of void, which is not possible by the definition of zero-initialisation.
+
+So I propose that `void{}` (and generic spellings thereof) be treated identically to `void()` and generic spellings thereof, to close this gap.
+
+The standard should also make use of `void{}` rather than `void()` in the few places it explicitly spells out the expression, leaving `void()` when a declaration of a parameterless function returning void is intended.
+
+Motivation {#motivation}
+
+Wording {#wording}
