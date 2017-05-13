@@ -22,7 +22,7 @@ Status: D
 Audience: EWG
 ED: https://github.com/TBBle/WG21-void/blob/master/papers/dxxxxr0.bs
 Editor: Paul "TBBle" Hampson <Paul.Hampson@Pobox.com>
-Date: 2017-04-30
+Date: 2017-05-14
 Abstract: <code>void()</code> is comparable to any <code>type()</code>, but <code>void{}</code> is needlessly invalid.
 </pre>
 
