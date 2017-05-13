@@ -17,7 +17,7 @@
 Group: wg21
 Title: Unambiguous prvalue <code>void</code>
 Shortname: dxxxx
-Revision: 0d0
+Revision: 0d1
 Status: D
 Audience: EWG
 ED: https://github.com/TBBle/WG21-void/blob/master/papers/dxxxxr0.bs
