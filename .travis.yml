@@ -8,4 +8,4 @@ install:
  - pip install --editable $PWD/bikeshed
  - bikeshed update
 script:
- - bikeshed papers/dxxxxr0.bs docs/dxxxxr0.html
+ - bikeshed spec papers/dxxxxr0.bs docs/dxxxxr0.html
