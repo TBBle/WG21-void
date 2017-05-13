@@ -1,30 +1,125 @@
+<pre class='biblio'>
+{
+  "C++CG": {
+    "authors": ["Bjarne Stroustrup", "Herb Sutter"],
+    "href": "https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines",
+    "title": "C++ Core Guidelines"
+  },
+  "N4659": {
+    "title": "Standard for Programming Language C++",
+    "date": "2017-03-21",
+    "href": "https://wg21.link/n4659",
+    "status": "Working Draft"
+  }
+}
+</pre>
 <pre class='metadata'>
 Group: wg21
-Title: Unambiguous prvalue `void`
-Shortname: Dxxxx
-Revision: 1d0
+Title: Unambiguous prvalue <code>void</code>
+Shortname: dxxxx
+Revision: 0d0
 Status: D
 Audience: EWG
-ED: http://example.com/url-this-spec-will-live-at
 ED: https://github.com/TBBle/WG21-void/blob/master/papers/dxxxxr0.bs
 Editor: Paul "TBBle" Hampson <Paul.Hampson@Pobox.com>
 Date: 2017-04-30
-Abstract: `void()` works like any other `type()`, but `void{}` is invalid.
+Abstract: <code>void()</code> is comparable to any <code>type()</code>, but <code>void{}</code> is needlessly invalid.
 </pre>
 
 Proposal {#proposal}
-=====================
+====================
 
-An explicit prvalue of type void (spelled `void()` or `type_equivalent to void()`) has a very restricted range of use-cases. Of the use-cases allowed by [...](), most exist to support propagating expressions of type void or dealing with them in a generic manner.
+An explicit prvalue of type <code>void</code> (spelled <code>void()</code> or "type_equivalent to <code>void</code>"<code>()</code>) has a very restricted range of use-cases, per <a href='http://eel.is/c++draft/basic.types#basic.fundamental-9'><b>[basic.fundamental]</b>/9</a>.
 
-As with all expressions `T()`, the 'Most Vexing Parse' results in `void()` being parsed as a declaration of a parameterless function returning void, unless in a context where only an expression is possible.
+As with all expressions <code>T()</code>, the 'Most Vexing Parse' results in <code>void()</code> being parsed as a declaration of a parameterless function returning void, unless in a context where only an expression is possible.
 
-The usual method to disambiguate this is to write `T{}` instead. Since [P... simplified value categories](), this is explicitly disallowed by the standard: The literal spelling `void()` or the generic spelling `T()` where `T` somehow evaluates to `void` is explicitly called out as a "prvalue of type void with no initialisation" (get exact text). The equivalent spelling using `{}` is falls through the usual rules to generate an initialisation expression, failing when a requirement it hit to zero-initialise a prvalue of void, which is not possible by the definition of zero-initialisation.
+The only use-case for an expression of type <code>void</code> which are not already in expression context is <code>typeid</code>. In this case, <code>typeid(void())</code> is not equivalent to <code>typeid(void)</code>. This is true of all other types, of course.
 
-So I propose that `void{}` (and generic spellings thereof) be treated identically to `void()` and generic spellings thereof, to close this gap.
+<code>sizeof(void())</code> will also see a function declaration, not an expression of type <code>void</code>, but since both are invalid operands for <code>sizeof</code>, the distinction is merely in the compiler diagnostic reported.
 
-The standard should also make use of `void{}` rather than `void()` in the few places it explicitly spells out the expression, leaving `void()` when a declaration of a parameterless function returning void is intended.
+The usual method to disambiguate such parses is to write <code>T{}</code> instead. Since [[p0135r1]], this is explicitly disallowed by the standard: The literal spelling <code>void()</code> or the generic spelling <code>T()</code> where <code>T</code> somehow evaluates to <code>void</code> is explicitly called out in <a href='http://eel.is/c++draft/expr.type.conv#2'><b>[expr.type.conv]</b>/2</a> as "a prvalue of the specified type that performs no initialization". The equivalent spelling using <code>{}</code> continues through the "otherwise" rules to direct-initialise a result object, failing when a requirement is hit to zero-initialise a prvalue of <code>void</code>, which is not possible, as <a href='http://eel.is/c++draft/dcl.init#6'>zero-initialisation</a> is only defined for scalars, class types, array types or reference types.
+
+While that seems like a relatively minor use-case, it becomes more interesting when using a type expression then evaluates to <code>void</code>. Authors of generic code should prefer ([[C++CG]]) to use unambigous <code>T{}</code> to get a prvalue of type <code>T</code>, and should not be stymied when that might happen to be <code>void</code>.
+
+So I propose that <code>void{}</code> (and generic spellings thereof) be treated identically to <code>void()</code> and generic spellings thereof, to close this gap.
+
+The standard should also make use of <code>void{}</code> rather than <code>void()</code> in the few places it explicitly spells out the expression, leaving <code>void()</code> to be used only when a declaration of a parameterless function returning <code>void</code> is intended.
+
+Related Work {#related}
+=======================
+
+There is already a larger proposal in flight, [[p0146r1]], which would remove this special-case entirely. This current proposal would be obsolete if that proposal is accepted, and in the meantime represents a smaller, simpler change in the same direction.
 
 Motivation {#motivation}
+========================
+
+The frame of a <a href='https://wandbox.org/permlink/6IEUOp05sg6orIOR'>motiviating case</a> is:
+````cpp
+#include <iostream>
+#include <type_traits>
+#include <cassert>
+
+template <bool skip, typename Func, typename... Args,
+  typename Return = std::result_of_t<Func(Args...)>>
+Return maybe_skip(Func&& func, Args&&... args)
+{
+  if constexpr (skip) {           // <== #1
+    return Return{};              // <== #2
+  } else {
+    return std::forward<Func&&>(func)(std::forward<Args&&>(args)...);
+  }
+}
+
+int calculate(int a, int b, int c)
+{
+  return a + b * c;
+}
+
+void output(int value)
+{
+  std::cout << value << "\n";
+}
+
+int main()
+{
+  // Easy.
+  int result = maybe_skip<false>(calculate, 5, 6, 7);
+  assert( result == 47 );
+  int noresult = maybe_skip<true>(calculate, 5, 6, 7);
+  assert( noresult == 0 );
+
+  // Fails at #2 without "consexpr" at #1
+  maybe_skip<false>(output, result);
+
+  // The motivating case, fails at #2 with
+  // * "illegal initializer type 'void'" or
+  // * "compound literal of non-object type 'void'" or
+  // * "'initializing': cannot convert from 'initializer list' to 'void'"
+  maybe_skip<true>(output, result);
+}
+````
+
+Changing <code>return Return{};</code> to <code>return Return();</code> works today, but runs counter to advice such as <a href='https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#Res-list'>"ES.23: Prefer the {} initializer syntax"</a>
+
 
 Wording {#wording}
+==================
+Relative to the latest C++ draft, [[!n4659]].
+
+Change in <b>8.2.3 Explicit type conversion (functional notation) [expr.type.conv]</b> paragraph 2:
+<blockquote>If the initializer is a parenthesized single expression, the type conversion expression is equivalent (in definedness, and if defined in meaning) to the corresponding cast expression. If the type is cv void and the initializer is ()<ins> or {}</ins>, the expression is a prvalue of the specified type that performs no initialization. Otherwise, the expression is a prvalue of the specified type whose result object is direct-initialized with the initializer. For an expression of the form T(), T shall not be an array type.</blockquote>
+
+Change in the example at <b>10.1.7.4 The <code>auto</code> specificer [dcl.spec.auto]</b> paragraph 9:
+<blockquote>
+  <code>auto* g() { }                   // error, cannot deduce auto* from void<del>()</del><ins>{}</ins></code>
+</blockquote>
+
+Change in Table 14 of <b>17.5.3 Variadic templates [temp.variadic]</b>:
+<blockquote>
+<table style='border: 1px solid black; border-collapse: collapse;'>
+<tr style='border-top: 1px solid black;'><td style='text-align:center; padding-left: 1em; padding-right: 1em;'><b>Operator</b></td><td style='text-align:center; padding-left: 1em; padding-right: 1em;'><b>Value when parameter pack is empty</b></td></tr>
+<tr style='border-top: 3px solid black; border-top-style: double;'><td style='text-align:left; padding-left: 1em; padding-right: 1em;'><code>&&</code></td><td style='text-align:left; padding-left: 1em; padding-right: 1em;'><code>true</code></td></tr>
+<tr><td style='text-align:left; padding-left: 1em; padding-right: 1em;'><code>||</code></td><td style='text-align:left; padding-left: 1em; padding-right: 1em;'><code>false</code></td></tr>
+<tr><td style='text-align:left; padding-left: 1em; padding-right: 1em;'><code>,</code></td><td style='text-align:left; padding-left: 1em; padding-right: 1em;'><code>void<del>()</del><ins>{}</ins></code></td></tr>
+</table>
+</blockquote>
