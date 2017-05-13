@@ -31,7 +31,7 @@ Proposal {#proposal}
 
 An explicit prvalue of type <code>void</code> (spelled <code>void()</code> or "type_equivalent to <code>void</code>"<code>()</code>) has a very restricted range of use-cases, per <a href='http://eel.is/c++draft/basic.types#basic.fundamental-9'><b>[basic.fundamental]</b>/9</a>.
 
-As with all expressions <code>T()</code>, the 'Most Vexing Parse' results in <code>void()</code> being parsed as a declaration of a parameterless function returning void, unless in a context where only an expression is possible.
+As with all expressions <code>T()</code>, the <a href='https://en.wikipedia.org/wiki/Most_vexing_parse'>'Most Vexing Parse'</a> results in <code>void()</code> being parsed as a declaration of a parameterless function returning void, unless in a context where only an expression is possible.
 
 The only use-case for an expression of type <code>void</code> which are not already in expression context is <code>typeid</code>. In this case, <code>typeid(void())</code> is not equivalent to <code>typeid(void)</code>. This is true of all other types, of course.
 
